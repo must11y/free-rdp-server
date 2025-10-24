@@ -34,22 +34,14 @@ jobs:
       run: |
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 0
         Write-Host "RDP has been enabled"
 
-    - name: Create RDP User
+    - name: Set Administrator Password
       run: |
-        $username = "rdpuser"
-        $password = "RDPPass2025"
-        $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
-        
-        New-LocalUser -Name $username -Password $securePassword -FullName "RDP User" -Description "RDP Access User"
-        Add-LocalGroupMember -Group "Remote Desktop Users" -Member $username
-        Add-LocalGroupMember -Group "Administrators" -Member $username
-        
-        Write-Host "=========================================="
-        Write-Host "User created: $username"
-        Write-Host "Password: $password"
-        Write-Host "=========================================="
+        $password = "Admin@2025"
+        net user runneradmin $password
+        Write-Host "Password set for runneradmin"
 
     - name: Display Connection Info
       run: |
@@ -59,23 +51,44 @@ jobs:
         Write-Host "   RDP CONNECTION INFORMATION"
         Write-Host "=========================================="
         Write-Host "Tailscale IP: $ip"
-        Write-Host "Username: rdpuser"
-        Write-Host "Password: RDPPass2025"
+        Write-Host "Username: runneradmin"
+        Write-Host "Password: Admin@2025"
         Write-Host "=========================================="
         Write-Host ""
         Write-Host "To connect:"
-        Write-Host "1. Install Tailscale on your local machine"
-        Write-Host "2. Connect to your Tailscale network"
-        Write-Host "3. Open Remote Desktop Connection"
-        Write-Host "4. Enter the Tailscale IP address above"
-        Write-Host "5. Use the credentials shown above"
+        Write-Host "1. Install Tailscale from: https://tailscale.com/download"
+        Write-Host "2. Login to Tailscale with your GitHub account"
+        Write-Host "3. Open Remote Desktop Connection (mstsc)"
+        Write-Host "4. Enter IP: $ip"
+        Write-Host "5. Username: runneradmin"
+        Write-Host "6. Password: Admin@2025"
         Write-Host "=========================================="
 
-    - name: Keep Alive
+    - name: Keep Server Running
       run: |
-        Write-Host "Server is running. Press Ctrl+C in Actions to stop."
+        Write-Host ""
+        Write-Host "=========================================="
+        Write-Host "SERVER IS NOW RUNNING!"
+        Write-Host "You can connect anytime using the info above"
+        Write-Host "This server will run for up to 6 hours"
+        Write-Host "=========================================="
+        Write-Host ""
+        
+        $counter = 0
         while ($true) {
-          Start-Sleep -Seconds 60
-          Write-Host "Server still running... $(Get-Date)"
+          Start-Sleep -Seconds 300
+          $counter += 5
+          Write-Host "Server running for $counter minutes... $(Get-Date)"
+          
+          # Display connection info every 30 minutes
+          if ($counter % 30 -eq 0) {
+            $ip = & "C:\Program Files\Tailscale\tailscale.exe" ip -4
+            Write-Host ""
+            Write-Host "=========================================="
+            Write-Host "REMINDER: Connection Info"
+            Write-Host "IP: $ip | User: runneradmin | Pass: Admin@2025"
+            Write-Host "=========================================="
+            Write-Host ""
+          }
         }
 
