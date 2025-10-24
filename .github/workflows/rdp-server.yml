@@ -1,1 +1,78 @@
+name: Free Windows RDP Server
 
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 9999
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Tailscale
+      run: |
+        Invoke-WebRequest -Uri "https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi" -OutFile "tailscale-setup.msi"
+        Start-Process msiexec.exe -Wait -ArgumentList '/i tailscale-setup.msi /quiet'
+        Start-Sleep -Seconds 10
+
+    - name: Connect to Tailscale
+      run: |
+        & "C:\Program Files\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=github-rdp-server
+        Start-Sleep -Seconds 5
+
+    - name: Get Tailscale IP
+      run: |
+        $ip = & "C:\Program Files\Tailscale\tailscale.exe" ip -4
+        Write-Host "=========================================="
+        Write-Host "Tailscale IP Address: $ip"
+        Write-Host "=========================================="
+
+    - name: Enable RDP
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Write-Host "RDP has been enabled"
+
+    - name: Create RDP User
+      run: |
+        $username = "rdpuser"
+        $password = ConvertTo-SecureString "RDP@Pass2025!" -AsPlainText -Force
+        New-LocalUser -Name $username -Password $password -FullName "RDP User" -Description "User for RDP access"
+        Add-LocalGroupMember -Group "Administrators" -Member $username
+        Add-LocalGroupMember -Group "Remote Desktop Users" -Member $username
+        Write-Host "=========================================="
+        Write-Host "RDP User Created Successfully!"
+        Write-Host "Username: $username"
+        Write-Host "Password: RDP@Pass2025!"
+        Write-Host "=========================================="
+
+    - name: Display Connection Info
+      run: |
+        $ip = & "C:\Program Files\Tailscale\tailscale.exe" ip -4
+        Write-Host ""
+        Write-Host "=========================================="
+        Write-Host "   RDP CONNECTION INFORMATION"
+        Write-Host "=========================================="
+        Write-Host "Tailscale IP: $ip"
+        Write-Host "Username: rdpuser"
+        Write-Host "Password: RDP@Pass2025!"
+        Write-Host "=========================================="
+        Write-Host ""
+        Write-Host "To connect:"
+        Write-Host "1. Install Tailscale on your local machine"
+        Write-Host "2. Connect to your Tailscale network"
+        Write-Host "3. Open Remote Desktop Connection"
+        Write-Host "4. Enter the Tailscale IP address above"
+        Write-Host "5. Use the credentials shown above"
+        Write-Host "=========================================="
+
+    - name: Keep Alive
+      run: |
+        Write-Host "Server is running. Press Ctrl+C in Actions to stop."
+        while ($true) {
+          Start-Sleep -Seconds 60
+          Write-Host "Server still running... $(Get-Date)"
+        }
