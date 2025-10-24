@@ -39,14 +39,16 @@ jobs:
     - name: Create RDP User
       run: |
         $username = "rdpuser"
-        $password = ConvertTo-SecureString "RDP@Pass2025!" -AsPlainText -Force
-        New-LocalUser -Name $username -Password $password -FullName "RDP User" -Description "User for RDP access"
-        Add-LocalGroupMember -Group "Administrators" -Member $username
+        $password = "RDPPass2025"
+        $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+        
+        New-LocalUser -Name $username -Password $securePassword -FullName "RDP User" -Description "RDP Access User"
         Add-LocalGroupMember -Group "Remote Desktop Users" -Member $username
+        Add-LocalGroupMember -Group "Administrators" -Member $username
+        
         Write-Host "=========================================="
-        Write-Host "RDP User Created Successfully!"
-        Write-Host "Username: $username"
-        Write-Host "Password: RDP@Pass2025!"
+        Write-Host "User created: $username"
+        Write-Host "Password: $password"
         Write-Host "=========================================="
 
     - name: Display Connection Info
@@ -58,7 +60,7 @@ jobs:
         Write-Host "=========================================="
         Write-Host "Tailscale IP: $ip"
         Write-Host "Username: rdpuser"
-        Write-Host "Password: RDP@Pass2025!"
+        Write-Host "Password: RDPPass2025"
         Write-Host "=========================================="
         Write-Host ""
         Write-Host "To connect:"
@@ -76,3 +78,4 @@ jobs:
           Start-Sleep -Seconds 60
           Write-Host "Server still running... $(Get-Date)"
         }
+
